@@ -1,7 +1,6 @@
-/*
-	Ricordati che la media sara' circa 10ns, cosi' recuperi la scala
-sembra buono:	emailData147_140327184601
-*/
+// 	Ricordati che la media sara' circa 10ns, cosi' recuperi la scala
+// 	sembra buono:	emailData147_140327184601
+
 
 // root
 // .L plottersimpleMacros.C+
@@ -96,6 +95,7 @@ double trigger (double x1, double y1, double x2, double y2, double x3, double y3
   // A+Bx = AmpFraction * amp
   double interpolation = (amp * AmpFraction/100. - A) / B; 
 
+
   if(isnan(interpolation) == true) {
     std::cout << " >>> A = " << A << " B = " <<  B << std::endl;
     std::cout << " >>> Delta = " << Delta << std::endl;
@@ -107,9 +107,11 @@ double trigger (double x1, double y1, double x2, double y2, double x3, double y3
     std::cout << " >>> x1, y1 = " << x1 << " " << y1 << " >>> x2, y2 = " << x2 << " " << y2
 	      << " >>> x3, y3 = " << x3 << " " << y3 << std::endl;
   }
+
   return interpolation;
 }
 
+//void plottersimpleMacros(TString Folder, TString runFolder, TString input)
 void plottersimpleMacros(TString Folder, TString runFolder)
 {
   gROOT->Reset();
@@ -119,9 +121,12 @@ void plottersimpleMacros(TString Folder, TString runFolder)
   char h1[10];
     for (int iw=0;iw<3;iw++){
     sprintf (h1,"Ch%d",iw);
-    if(runFolder != "WFRun012" && runFolder != "WFRun014") histo[iw] = new TH1F( h1, "", 1000, 0., 50.);
-    if(runFolder == "WFRun012") histo[iw] = new TH1F( h1, "", 2000, 0., 100.);
-    if(runFolder == "WFRun014") histo[iw] = new TH1F( h1, "", 4000, 0., 200.);
+    if(runFolder == "WFRun006" || runFolder == "WFRun008" ||
+       runFolder == "WFRun009" || runFolder == "WFRun010" ||
+       runFolder == "WFRun022" || runFolder == "WFRun023") histo[iw] = new TH1F( h1, "", 1000, 0., 50.);
+    if(runFolder == "WFRun016" || runFolder == "WFRun017" ||
+       runFolder == "WFRun018" || runFolder == "WFRun019" || 
+       runFolder == "WFRun020" || runFolder == "WFRun021") histo[iw] = new TH1F( h1, "", 4000, 0., 200.);
     histo[iw] -> SetXTitle ("Time (ns)");
     histo[iw] -> SetYTitle ("Amplitude (V)");
     histo[iw]->SetLineWidth(2);
@@ -134,7 +139,7 @@ void plottersimpleMacros(TString Folder, TString runFolder)
 
   TH1F* hBaseLine[3];
   char h2[10];
-    for (int iw=0;iw<3;iw++){
+  for (int iw=0;iw<3;iw++){
     sprintf (h2,"Bs%d",iw);
     hBaseLine[iw] = new TH1F( h2, "", 500, -0.005, 0.005);
     hBaseLine[iw] -> SetXTitle ("BaseLine (V)");
@@ -144,13 +149,15 @@ void plottersimpleMacros(TString Folder, TString runFolder)
   hBaseLine[2]->SetLineColor(kGreen+1); 
 
   int nSampling = 1001;
-  if(runFolder == "WFRun012") nSampling = 2001;
-  if(runFolder == "WFRun014") nSampling = 4001;
+  if(runFolder == "WFRun016" || runFolder == "WFRun017" ||
+     runFolder == "WFRun018" || runFolder == "WFRun019" || 
+     runFolder == "WFRun020" || runFolder == "WFRun021") nSampling = 4001;
 
   // Tree branches and tree strcuture
   float ampMax[3];
   float ped[3];
   float integral[3];
+  float absIntegral[3];
   float tStamp[3]; 
   float tStampMax[3]; 
   float bLine[3];
@@ -159,6 +166,7 @@ void plottersimpleMacros(TString Folder, TString runFolder)
   nt->Branch("ampMax",&ampMax,"ampMax[3]/F"); 
   nt->Branch("ped",&ped,"ped[3]/F"); 
   nt->Branch("integral",&integral,"integral[3]/F"); 
+  nt->Branch("absIntegral",&absIntegral,"absIntegral[3]/F"); 
   nt->Branch("tStamp",&tStamp,"tStamp[3]/F"); 
   nt->Branch("tStampMax",&tStampMax,"tStampMax[3]/F"); 
   nt->Branch("bLine",&bLine,"bLine[3]/F"); 
@@ -177,11 +185,25 @@ void plottersimpleMacros(TString Folder, TString runFolder)
     leg->AddEntry(histo[iw],histo[iw]->GetTitle(),"l");
   }
   leg->Draw();
-
-  // dump the waveform file list into a temporary file
+  
+  //dump the waveform file list into a temporary file
+  TString input = "null";
+  if(input == "null"){
   TString command = "ls " + Folder + "/WaveForms/" + runFolder + "/*Ch1* > input.tmp"; 
-  //TString command = "ls " + runFolder + "/*Ch1* > input.tmp"; 
   gSystem -> Exec(command); 
+  //   TString command = "cd " + Folder + "/WaveForms/" + runFolder;
+  std::cout << " >>>> command = " << command << std::endl;
+  //   gSystem -> Exec(command);   
+  //   command = "ls ./*Ch1* > input.tmp"; 
+  //   gSystem -> Exec(command); 
+  //   command = "cd - ";
+  //   gSystem -> Exec(command); 
+  }
+  else {
+    TString command = "cp " + input + " input.tmp";
+    gSystem -> Exec(command);
+  }
+  
 
   // loop over the file and read data
   ifstream inFile("input.tmp");
@@ -194,70 +216,94 @@ void plottersimpleMacros(TString Folder, TString runFolder)
   TString filOut = runFolder + ".root";
   TFile *f = new TFile(filOut,"recreate");
 
+  std::cout << " >>> run on waveforms " << std::endl;
 
   TString waveFile[400];
-  while(getline(inFile,line) && ifile<18000)		  //  evento 17 e' buono per Run4
-	{
+  while(getline(inFile,line) && ifile<18000){		  //  evento 17 e' buono per Run4
+    //while(getline(inFile,line) && ifile<1){		  //  evento 17 e' buono per Run4
     // define wafeforms input
-    waveFile[0] = (TString)line;
+    //    waveFile[0] = (TString)line;
+    waveFile[0] = line;
 
-    Ssiz_t s=waveFile[0].Sizeof();
-    waveFile[2] = (TString)waveFile[0].Replace(s-6,s,"3.txt"); // planacon
+    Ssiz_t s = waveFile[0].Sizeof();
+    if(runFolder == "WFRun016" || runFolder == "WFRun017" ||
+       runFolder == "WFRun018" || runFolder == "WFRun019" ||
+       runFolder == "WFRun020" || runFolder == "WFRun021" ||
+       runFolder == "WFRun022" || runFolder == "WFRun023")    waveFile[2] = (TString)waveFile[0].Replace(s-6,s,"4.txt"); // planacon
+    else    waveFile[2] = (TString)waveFile[0].Replace(s-6,s,"3.txt"); // planacon
     waveFile[1] = (TString)waveFile[0].Replace(s-6,s,"2.txt"); // B-MCP1 trigger
     waveFile[0] = (TString)waveFile[0].Replace(s-6,s,"1.txt"); // B-MCP2 trigger
-    ifile++;
-    //    if(ifile != 22) continue;
+
+    //    std::cout << " >>> waveFile[0] = " << waveFile[0] << std::endl;
+    //    std::cout << " >>> pre ifile = " << ifile << std::endl;
+    ++ifile;
+    //    std::cout << " >>> post ifile = " << ifile << std::endl;
+
     // read waveforms
     for (int iw=0;iw<3;iw++) {
-      // cout << "Reading... " << waveFile[iw] << endl;
+      //      std::cout << "Reading... " << waveFile[iw] << std::endl;
 
       float counts=0;
       ampMax[iw] = 0;
       ped[iw] = 0;
       integral[iw] = 0;
+      absIntegral[iw] = 0;
       tStamp[iw] = 0;
       tStampMax[iw] = 0;
       bLine[iw] = 0;
       bLineSig[iw] = 0;
+
       std::ifstream infile (waveFile[iw].Data(), std::ios::in);
-      for (int bin=1;bin<nSampling;bin++){
+      for(int bin=1;bin<nSampling;bin++){
+
 	infile >> counts;
+	//	std::cout << " counts = " << counts << std::endl;
 	if (iw==2) counts = -counts; // planacon readout at the MCP output 
 	                             // plane and not at the anode 
 
-	if(bin <= 101 && runFolder) ped[iw] += counts;
+	if(bin <= 101 && runFolder) {
+	  ped[iw] += counts;
+	  //	  cosi' e' il noise sul singolo sample
+	  hBaseLine[iw]->Fill(counts);
+	}
 
 	if (counts < ampMax[iw]) {
 	  ampMax[iw] = counts;
 	  tStamp[iw] = bin; 
 	}
-	//		std::cout << " bin, counts, ampMax[iw], ped = " << bin << " " << counts << " " << ampMax[iw] << " " << ped[iw] << std::endl;  
+	//	std::cout << " bin, counts, ampMax[iw], ped = " << bin << " " << counts << " " << ampMax[iw] << " " << ped[iw] << std::endl;  
 	histo[iw] -> SetBinContent(bin, counts);
+	if(bin > 101) absIntegral[iw] += fabs(counts);
       }
-//        std::cout << " iw = " << iw << std::endl;        
-//        std::cout << " ped[iw] = " << ped[iw] << std::endl;        
-//        std::cout << " tStamp[iw] = " << tStamp[iw] << std::endl;  
-//        std::cout << " ampMax[iw] = " << ampMax[iw] << std::endl;  
+      /*
+      std::cout << " iw = " << iw << std::endl;        
+      std::cout << " ped[iw] = " << ped[iw] << std::endl;        
+      std::cout << " tStamp[iw] = " << tStamp[iw] << std::endl;  
+      std::cout << " ampMax[iw] = " << ampMax[iw] << std::endl;  
+      */
 
       ped[iw] = ped[iw] / 100.;
       ampMax[iw] = ampMax[iw] - ped[iw];
       tStampMax[iw] = tStamp[iw];
 
+      //fixme
       if(ampMax[iw] > 0. || tStampMax[iw] == 1) continue;      
 
-      hBaseLine[iw]->Fill(ped[iw]);
+      //cosi' e' il noise correlato
+      //      hBaseLine[iw]->Fill(ped[iw]);
 
-//       if(iw == 2) {
-// 	std::cout << " ped[iw] = " << ped[iw] << std::endl;
-// 	std::cout << " tStamp[iw] = " << tStamp[iw] << std::endl;
-// 	std::cout << " ampMax[iw] = " << ampMax[iw] << std::endl;
-//       }
-
+      //       if(iw == 2) {
+      // 	std::cout << " ped[iw] = " << ped[iw] << std::endl;
+      // 	std::cout << " tStamp[iw] = " << tStamp[iw] << std::endl;
+      // 	std::cout << " ampMax[iw] = " << ampMax[iw] << std::endl;
+      //       }
+      
       for (int bin=1;bin<nSampling;bin++){
 	histo[iw]->SetBinContent(bin, (histo[iw]->GetBinContent(bin) - ped[iw]));
       }
       cc->cd();
       histo[iw]->Draw("same");
+
 
       int rif = 0;
       for (int scan = tStamp[iw]; scan > 0; --scan)
@@ -267,7 +313,8 @@ void plottersimpleMacros(TString Folder, TString runFolder)
 	  rif = scan;
 	}
       tStamp[iw] = trigger((rif-1)*0.05, histo[iw]->GetBinContent(rif-1), rif*0.05, histo[iw]->GetBinContent(rif), 
-			   (rif+1)*0.05, histo[iw]->GetBinContent(rif+1), frac, ampMax[iw]);
+ 			   (rif+1)*0.05, histo[iw]->GetBinContent(rif+1), frac, ampMax[iw]);
+      
 
 
       if(isnan(tStamp[iw]) == true || isnan(tStampMax[iw]) == true) {
@@ -276,30 +323,38 @@ void plottersimpleMacros(TString Folder, TString runFolder)
 	std::cout << " tStamp[iw] = " << tStamp[iw] << std::endl;
 	std::cout << " ampMax[iw] = " << ampMax[iw] << std::endl;
 	std::cout << " iw = " << iw << std::endl;
+	}
 
-      }
 
       integral[iw] = histo[iw]->Integral(tStamp[iw]/0.05, tStampMax[iw]/0.05);      
-
 
       //amplitude walk correction for mcp  y_new = y_old - Delta_Y
       //      if(iw == 2 && ampMax[iw] > -0.02 && ampMax[iw] < -0.002 && 
       if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun005") tStamp[iw] = tStamp[iw] - 12.3584 * (-0.01 - ampMax[iw]);
       
-      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun006") tStamp[iw] = tStamp[iw] - 2.52178 * (-0.01 - ampMax[iw]);
-      //      correctForAmplitudeWalk == true && runFolder == "WFRun006") tStamp[iw] = tStamp[iw] - 6.32315 * (-0.01 - ampMax[iw]);
-      
-      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun007") tStamp[iw] = tStamp[iw] + 8.62731 * (-0.01 - ampMax[iw]);
+      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun006") tStamp[iw] = tStamp[iw] - 5.08143 * (-0.01 - ampMax[iw]);
+      //      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun007") tStamp[iw] = tStamp[iw] + 1.01759 * (-0.01 - ampMax[iw]);
+      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun008") tStamp[iw] = tStamp[iw] + 0.763602 * (-0.01 - ampMax[iw]);
+      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun009") tStamp[iw] = tStamp[iw] - 7.33521 * (-0.01 - ampMax[iw]);
+      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun010") tStamp[iw] = tStamp[iw] - 0.741145 * (-0.01 - ampMax[iw]);
 
-      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun010") tStamp[iw] = tStamp[iw] - 7.2806 * (-0.01 - ampMax[iw]);
-      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun012") tStamp[iw] = tStamp[iw] + 6.77531 * (-0.01 - ampMax[iw]);
+      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun016") tStamp[iw] = tStamp[iw] - 26.0728 * (-0.01 - ampMax[iw]);
+      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun017") tStamp[iw] = tStamp[iw] + 15.8954 * (-0.01 - ampMax[iw]);
+      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun018") tStamp[iw] = tStamp[iw] + 27.7891 * (-0.01 - ampMax[iw]);
+      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun019") tStamp[iw] = tStamp[iw] + 37.7841 * (-0.01 - ampMax[iw]);
+      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun020") tStamp[iw] = tStamp[iw] + 521.23 * (-0.01 - ampMax[iw]);
+      //      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun021") tStamp[iw] = tStamp[iw] + 27.7891 * (-0.01 - ampMax[iw]);
+
+      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun022") tStamp[iw] = tStamp[iw] - 1.78495 * (-0.01 - ampMax[iw]);
+      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun023") tStamp[iw] = tStamp[iw] + 1.752 * (-0.01 - ampMax[iw]);
     }
 	
-
     // save interesting wavefo (VEEEEERY ROUGH)
-    if (fabs((tStamp[1]-tStamp[0])-11.15) < 0.25 ) 			//double coincidence
+    if (runFolder != "WFRun016" && runFolder != "WFRun017" && 
+	runFolder != "WFRun018" && runFolder != "WFRun019" &&
+	runFolder != "WFRun020" && runFolder != "WFRun021" && 
+	runFolder != "WFRun022" && runFolder != "WFRun023" && fabs((tStamp[1]-tStamp[0])-11.15) < 0.25) //double coincidence
       {
-	iwin++;
 	if ((tStamp[2]-tStamp[0])>2.5 && (tStamp[2]-tStamp[0])<3.5 && ampMax[2]<-0.0026)
 	  {
 	    for (int iw=0;iw<3;iw++) 	
@@ -312,60 +367,74 @@ void plottersimpleMacros(TString Folder, TString runFolder)
 	    isave++;
 	  }	
       }
+    if(runFolder == "WFRun016" || runFolder == "WFRun017" ||
+       runFolder == "WFRun018" || runFolder == "WFRun019" || 
+       runFolder == "WFRun020" || runFolder == "WFRun021" ||
+       runFolder == "WFRun022" || runFolder == "WFRun023") {
+      for (int iw=0;iw<3;iw++) 	
+	{  
+	  sprintf (h1,"Ch%d_%03d",iw,isave);
+	  histo[iw]->SetName(h1);
+	  histo[iw]->SetTitle(h1);
+	  histo[iw]->Write();
+	}
+      isave++;
+    }	
+
     //     std::cout << "ampMax[0] = " << ampMax[0] <<  std::endl;
     //     std::cout << "ampMax[1] = " << ampMax[1] <<  std::endl;
     //     std::cout << "ampMax[2] = " << ampMax[2] <<  std::endl;
-
+    
     // fill ntuple
     nt->Fill();
-	}
-
+  }
   hBaseLine[0]->Write();
   hBaseLine[1]->Write();
   hBaseLine[2]->Write();
+  
 
-
-       TF1* bs0 = new TF1("bs0", "gaus", -5., 5.);
-       bs0->SetParameters(20., -0.001, 0.0001);      
-       TF1* bs1 = (TF1*)bs0->Clone("bs1");
-       TF1* bs2 = (TF1*)bs0->Clone("bs2");
-
-       hBaseLine[0]->Fit("bs0");
-       hBaseLine[1]->Fit("bs1");
-       hBaseLine[2]->Fit("bs2");
-
-
-       for(int iw=0; iw<3; ++iw){
-	 ampMax[iw] = 0;
-	 ped[iw] = 0;
-	 integral[iw] = 0;
-	 tStamp[iw] = 0;
-	 tStampMax[iw] = 0;
-       }
-
-       bLine[0] = bs0->GetParameter(1);
-       bLine[1] = bs1->GetParameter(1);
-       bLine[2] = bs2->GetParameter(1);
-       bLineSig[0] = bs0->GetParameter(2);
-       bLineSig[1] = bs1->GetParameter(2);
-       bLineSig[2] = bs2->GetParameter(2);
-       nt->Fill();
-
-       TCanvas* cBaseLine = new TCanvas("cBaseLine", "cBaseLine");
-       cBaseLine->cd();
-       hBaseLine[0]->Draw();
-       hBaseLine[1]->Draw("same");
-       hBaseLine[2]->Draw("same");
-       
-
-       bs0->Write();
-       bs1->Write();
-       bs2->Write();
-
-       nt->Write();
-       f->Close();
-       
-       std::cout << " END " << std::endl;
+  TF1* bs0 = new TF1("bs0", "gaus", -5., 5.);
+  bs0->SetParameters(20., -0.001, 0.0001);      
+  TF1* bs1 = (TF1*)bs0->Clone("bs1");
+  TF1* bs2 = (TF1*)bs0->Clone("bs2");
+  
+  hBaseLine[0]->Fit("bs0");
+  hBaseLine[1]->Fit("bs1");
+  hBaseLine[2]->Fit("bs2");
+  
+  
+  for(int iw=0; iw<3; ++iw){
+    ampMax[iw] = 0;
+    ped[iw] = 0;
+    integral[iw] = 0;
+    absIntegral[iw] = 0;
+    tStamp[iw] = 0;
+    tStampMax[iw] = 0;
+  }
+  
+  bLine[0] = bs0->GetParameter(1);
+  bLine[1] = bs1->GetParameter(1);
+  bLine[2] = bs2->GetParameter(1);
+  bLineSig[0] = bs0->GetParameter(2);
+  bLineSig[1] = bs1->GetParameter(2);
+  bLineSig[2] = bs2->GetParameter(2);
+  nt->Fill();
+  
+  TCanvas* cBaseLine = new TCanvas("cBaseLine", "cBaseLine");
+  cBaseLine->cd();
+  hBaseLine[0]->Draw();
+  hBaseLine[1]->Draw("same");
+  hBaseLine[2]->Draw("same");
+  
+  
+  bs0->Write();
+  bs1->Write();
+  bs2->Write();
+  
+  nt->Write();
+  f->Close();
+  
+  std::cout << " END " << std::endl;
 }//fine del ciclo for
 
 
@@ -374,12 +443,15 @@ void plottersimpleMacros(TString Folder, TString runFolder)
 //********************************************        READING NTUPLES      **************************************************************
 void drawSimple(TString runFolder){
 
+  bool correctForAmplitudeWalk = true;
+
   TFile* Reading = new TFile(TString(runFolder+".root"), "read");
   TTree* t1 = (TTree*)Reading->Get("nt");    	
 
   float amplitude[3];
   float ped[3];
   float integral[3];
+  float absIntegral[3];
   float time[3];
   float timeMax[3];
   float bLine[3];
@@ -387,6 +459,7 @@ void drawSimple(TString runFolder){
   t1->SetBranchAddress("ampMax",amplitude);		
   t1->SetBranchAddress("ped",ped);		
   t1->SetBranchAddress("integral",integral);		
+  t1->SetBranchAddress("absIntegral",absIntegral);		
   t1->SetBranchAddress("tStamp",time);
   t1->SetBranchAddress("tStampMax",timeMax);
   t1->SetBranchAddress("bLine",bLine);
@@ -394,17 +467,55 @@ void drawSimple(TString runFolder){
   float bLine_OK[3];
   float bLineSig_OK[3];
 
-  TH1F* histos = new TH1F ("histos", "histos", 200, 6., 18.);
-  //  TH1F* histos = new TH1F ("histos", "histos", 1200, -100., 100.);
-  if(runFolder == "WFRun010") histos = new TH1F ("histos", "histos", 200, 6., 18.);
-  //  if(runFolder == "WFRun008") histos = new TH1F ("histos", "histos", 1200, 6., 18.);
-  //  if(runFolder == "WFRun007") histos = new TH1F ("histos", "histos", 1200, 6., 18.);
 
+  TH1F* h_absIntegral0 = new TH1F ("h_absIntegral0", "h_absIntegral0", 1000, 0., 50.);
+  TH1F* h_absIntegral1 = new TH1F ("h_absIntegral1", "h_absIntegral3", 1000, 0., 50.);
+  TH1F* h_absIntegral2 = new TH1F ("h_absIntegral2", "h_absIntegral2", 1000, 0., 50.);
+
+  TH1F* histos = new TH1F ("histos", "histos", 625, 0., 30.);
+  //  TH1F* histos = new TH1F ("histos", "histos", 1200, -100., 100.);
+  if(runFolder == "WFRun010") histos = new TH1F ("histos", "histos", 625, 0., 30.);
+  //  if(runFolder == "WFRun008") histos = new TH1F ("histos", "histos", 1200, 6., 18.);
+  //  if(runFolder == "WFRun007") histos = new TH1F ("histos", "histos", 300, 6., 18.);
+  if(runFolder == "WFRun016") histos = new TH1F ("histos", "histos", 750, 0., 30.);
+  if(runFolder == "WFRun022") histos = new TH1F ("histos", "histos", 625, 0., 30.);
+  if(runFolder == "WFRun023") histos = new TH1F ("histos", "histos", 625, 0., 30.);
+ 
   TH1F* h_signal = new TH1F ("h_signal", "h_signal", 600, -20., 20.);
+  if(runFolder == "WFRun005") h_signal = new TH1F ("h_signal", "h_signal", 400, -20., 20.);
+  if(runFolder == "WFRun007") h_signal = new TH1F ("h_signal", "h_signal", 800, -20., 20.);
+  if(runFolder == "WFRun011") h_signal = new TH1F ("h_signal", "h_signal", 600, -40., 40.);
   if(runFolder == "WFRun012") h_signal = new TH1F ("h_signal", "h_signal", 1200, -40., 40.);
   if(runFolder == "WFRun010") h_signal = new TH1F ("h_signal", "h_signal", 1200, -40., 40.);
+  if(runFolder == "WFRun016") h_signal = new TH1F ("h_signal", "h_signal", 300, -20., 20.);
+  if(runFolder == "WFRun017") h_signal = new TH1F ("h_signal", "h_signal", 800, -20., 20.);
+  if(runFolder == "WFRun019") h_signal = new TH1F ("h_signal", "h_signal", 400, -20., 20.);
+  if(runFolder == "WFRun020") h_signal = new TH1F ("h_signal", "h_signal", 400, -20., 20.);
+  if(runFolder == "WFRun021") h_signal = new TH1F ("h_signal", "h_signal", 400, -20., 20.);
+  if(runFolder == "WFRun022") h_signal = new TH1F ("h_signal", "h_signal", 800, -10., 10.);
+  if(runFolder == "WFRun023") h_signal = new TH1F ("h_signal", "h_signal", 800, -10., 10.);
+  if(runFolder == "WFRun025") h_signal = new TH1F ("h_signal", "h_signal", 800, -20., 20.);
+
+  //
+  TH1F* h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 600, -20., 20.);
+  if(runFolder == "WFRun005") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 400, -20., 20.);
+  if(runFolder == "WFRun007") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 800, -20., 20.);
+  if(runFolder == "WFRun011") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 600, -40., 40.);
+  if(runFolder == "WFRun012") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 1200, -40., 40.);
+  if(runFolder == "WFRun010") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 1200, -40., 40.);
+  if(runFolder == "WFRun016") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 300, -20., 20.);
+  if(runFolder == "WFRun017") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 800, -20., 20.);
+  if(runFolder == "WFRun019") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 400, -20., 20.);
+  if(runFolder == "WFRun020") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 400, -20., 20.);
+  if(runFolder == "WFRun021") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 400, -20., 20.);
+  if(runFolder == "WFRun022") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 800, -10., 10.);
+  if(runFolder == "WFRun023") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 800, -10., 10.);
+  if(runFolder == "WFRun025") h_signalTrip = new TH1F ("h_signalTrip", "h_signalTrip", 800, -20., 20.);
+
   TH1F* h_signal2 = new TH1F ("h_signal2", "h_signal2", 1200, -50., 50.);
+  if(runFolder == "WFRun016") h_signal2 = new TH1F ("h_signal2", "h_signal2", 4200, -100., 100.);
   TH1F* h_signal3 = new TH1F ("h_signal3", "h_signal3", 1200, -50., 50.);
+  if(runFolder == "WFRun016") h_signal3 = new TH1F ("h_signal3", "h_signal3", 4200, -100., 100.);
 
   TH1F* h_integral_Ch0 = new TH1F("h_integral_Ch0", "", 1000, -1., 50.);
   TH1F* h_integral_Ch1 = new TH1F("h_integral_Ch1", "", 1000, -1., 50.);
@@ -450,13 +561,24 @@ void drawSimple(TString runFolder){
   for(int iCount=0; iCount<t1->GetEntries()-2; ++iCount){
     t1->GetEntry(iCount);
 
+    h_absIntegral0->Fill(absIntegral[0]);
+    h_absIntegral1->Fill(absIntegral[1]);
+    h_absIntegral2->Fill(absIntegral[2]);
+    //    if((runFolder == "WFRun022" || runFolder == "WFRun023") && 
+       //       (absIntegral[0] > 10. || absIntegral[1] > 10. || absIntegral[2] > 10.)) continue;
+    if( (absIntegral[0] > 8. || absIntegral[1] > 8. || absIntegral[2] > 5.) ) continue;
+    if( (runFolder == "WFRun022" || runFolder == "WFRun023") &&
+	(absIntegral[0] > 2. || absIntegral[1] > 2. || absIntegral[2] > 2.) ) continue;
+    //    if(absIntegral[0] > 8. || absIntegral[1] > 8) continue;
+    //if(absIntegral[2] > 5.) continue;
+
+
     if(amplitude[0] > 0. || timeMax[0] == 1 ||
        amplitude[1] > 0. || timeMax[1] == 1) continue;
 
 
-    if(//integral[0] > -15. && integral[1] > -15. && 
-	 amplitude[0] < -3.*bLineSig_OK[0]  && amplitude[1] < -3.*bLineSig_OK[1] &&
-	 amplitude[0] < -0.002 && amplitude[1] < -0.002 && timeMax[0] > 1 && timeMax[1] > 1 ){
+    if(amplitude[0] < -3.*bLineSig_OK[0]  && amplitude[1] < -3.*bLineSig_OK[1] &&
+       timeMax[0] > 1 && timeMax[1] > 1 ){
 
       histos->Fill(time[1]-time[0]);
       h_integral_Ch0->Fill(-integral[0]);
@@ -464,9 +586,26 @@ void drawSimple(TString runFolder){
 
       h_amplitude_Ch0->Fill(amplitude[0]);
       h_amplitude_Ch1->Fill(amplitude[1]);
-      if(//integral[2] > -15. && 
-	 amplitude[2] < -3.*bLineSig_OK[2] && 
-	 amplitude[2] < -0.002 && timeMax[2] > 1){
+      if(amplitude[2] < -3.*bLineSig_OK[2] && timeMax[2] > 1){
+
+	/////////////// amplitude walk correction
+	//amplitude walk correction for mcp  y_new = y_old - Delta_Y
+	if(correctForAmplitudeWalk == true && runFolder == "WFRun006") time[2] = time[2] - 5.08143 * (-0.01 - amplitude[2]);
+	if(correctForAmplitudeWalk == true && runFolder == "WFRun008") time[2] = time[2] + 0.763602 * (-0.01 - amplitude[2]);
+	if(correctForAmplitudeWalk == true && runFolder == "WFRun009") time[2] = time[2] - 7.33521 * (-0.01 - amplitude[2]);
+	if(correctForAmplitudeWalk == true && runFolder == "WFRun010") time[2] = time[2] - 0.741145 * (-0.01 - amplitude[2]);
+	
+	if(correctForAmplitudeWalk == true && runFolder == "WFRun016") time[2] = time[2] - 26.0728 * (-0.01 - amplitude[2]);
+	if(correctForAmplitudeWalk == true && runFolder == "WFRun017") time[2] = time[2] + 15.8954 * (-0.01 - amplitude[2]);
+	if(correctForAmplitudeWalk == true && runFolder == "WFRun018") time[2] = time[2] + 27.7891 * (-0.01 - amplitude[2]);
+	if(correctForAmplitudeWalk == true && runFolder == "WFRun019") time[2] = time[2] + 37.7841 * (-0.01 - amplitude[2]);
+	//	if(correctForAmplitudeWalk == true && runFolder == "WFRun020") time[2] = time[2] + 521.23 * (-0.01 - amplitude[2]);
+	//      if(iw == 2 && correctForAmplitudeWalk == true && runFolder == "WFRun021") time[2] = time[2] + 27.7891 * (-0.01 - amplitude[2]);
+
+	if(correctForAmplitudeWalk == true && runFolder == "WFRun022") time[2] = time[2] - 1.78495 * (-0.01 - amplitude[2]);
+	if(correctForAmplitudeWalk == true && runFolder == "WFRun023") time[2] = time[2] + 1.752 * (-0.01 - amplitude[2]);
+	///////////////
+
 	h_signal->Fill((time[1]+time[0])*0.5-time[2]);
 	h_signal2->Fill(time[1]-time[2]);
 	h_signal3->Fill(time[2]-time[0]);
@@ -478,6 +617,15 @@ void drawSimple(TString runFolder){
       }
     }
   }
+
+  h_absIntegral0->SetLineColor(kBlue);
+  h_absIntegral1->SetLineColor(kRed);
+  h_absIntegral2->SetLineColor(kGreen);
+
+  TCanvas* cAbsIntegral = new TCanvas();
+  h_absIntegral0->Draw();
+  h_absIntegral1->Draw("same");
+  h_absIntegral2->Draw("same");
 
   h_integral_Ch0->SetLineColor(kBlue);
   h_integral_Ch1->SetLineColor(kRed);
@@ -511,38 +659,37 @@ void drawSimple(TString runFolder){
   TCanvas *coincidenze = new TCanvas();
   coincidenze -> Divide (4,1);
 
+  std::string inputRun;
+  std::string rangeMin, rangeMax, param0, param1, param2, param3, fitMin, fitMax;
+  std::ifstream inFile("analyzed_data/FitParametersDouble.txt", std::ios::in);
+  while(!inFile.eof()){
+    inFile >> inputRun >> rangeMin >> rangeMax >> param0 >> param1 >> param2 >> param3 >> fitMin >> fitMax;
+//     std::cout << " inputRun = " << inputRun << std::endl;
+//     std::cout << " rangeMin = " << rangeMin << std::endl;
+//     std::cout << " runFolder = " << runFolder << std::endl;
+//     std::cout << " inputRun = " << inputRun << std::endl;
+    if(runFolder == inputRun) break;
+  }
+  inFile.close();
+ 
   //histos => difference
   histos->GetXaxis()->SetTitle("t0 - t1 (ns)");
   histos->SetTitle("difference");	
   coincidenze -> cd(1);
-  histos->GetXaxis()->SetRangeUser(10.,12.);
-  gGauss->SetParameters(0.1, 1., 11.1, 3.);	
-  histos->Fit("gGauss","","",9.5,12.5);
-  if(runFolder == "WFRun004"){
-    histos->GetXaxis()->SetRangeUser(10.,12.);
-    gGauss->SetParameters(0.1, 1., 10.1, 3.);	
-    histos->Fit("gGauss","","",9.5,12.5);
-  }
-  if(runFolder == "WFRun008"){
-    histos->GetXaxis()->SetRangeUser(10.,12.);
-    gGauss->SetParameters(0.5, 1., 11.2, 3.);	
-    histos->Fit("gGauss","","",8.,16.);
-  }
-  if(runFolder == "WFRun010"){
-    histos->GetXaxis()->SetRangeUser(10.,12.);
-    gGauss->SetParameters(0.5, 500., 11.1, 10.);	
-    histos->Fit("gGauss","","",9.5,12.5);
-  }
-  if(runFolder == "WFRun012"){
-    histos->GetXaxis()->SetRangeUser(10.,12.);
-    gGauss->SetParameters(0.05,182.,11.01,0.);
-    histos->Fit("gGauss","","",8.,16.);
-  }
+  histos->GetXaxis()->SetRangeUser(atof(rangeMin.c_str()), atof(rangeMax.c_str()));
+  gGauss->SetParameters(atof(param0.c_str()), atof(param1.c_str()), atof(param2.c_str()), atof(param3.c_str()) );
+  histos->Fit("gGauss","","",atof(fitMin.c_str()), atof(fitMax.c_str()));
 
   std::cout<<"sigma difference = "<<gGauss->GetParameter(0)<<std::endl;
   float sigma_diff = fabs(gGauss->GetParameter(0));
   float sigma_diffE = fabs(gGauss->GetParError(0));
   float mean_diff = gGauss->GetParameter(2);
+
+  std::cout << " mean_diff-3.*sigma_diff " << mean_diff-3.*sigma_diff << " mean_diff+3.*sigma_diff " << mean_diff+3.*sigma_diff<< std::endl;
+  float doubleRate = histos->Integral(histos->FindBin(mean_diff-3.*sigma_diff),histos->FindBin(mean_diff+3.*sigma_diff));
+  //  float doubleRate = histos->Integral(1,histos->GetNbinsX()); ///histos->GetBinWidth(1);
+  float doubleFakeRate = histos->Integral(histos->FindBin(mean_diff-3.*sigma_diff-2.),histos->FindBin(mean_diff+3.*sigma_diff-2.));
+
 
   //h_signal2 => 1 - mcp
   h_signal2->GetXaxis()->SetRangeUser(6.5,9.5);
@@ -568,31 +715,65 @@ void drawSimple(TString runFolder){
   float sigma_t2dat0E = fabs(gGauss->GetParError(0));
   float mean_t2dat0 = gGauss->GetParameter(2);
 
+
+  for(int iCount=0; iCount<t1->GetEntries()-2; ++iCount){
+    t1->GetEntry(iCount);
+    if( (absIntegral[0] > 8. || absIntegral[1] > 8 || absIntegral[2] > 5.) ) continue;
+    if( (runFolder == "WFRun022" || runFolder == "WFRun023") &&
+	(absIntegral[0] > 2. || absIntegral[1] > 2. || absIntegral[2] > 2.) ) continue;
+
+    if(amplitude[0] > 0. || timeMax[0] == 1 ||
+       amplitude[1] > 0. || timeMax[1] == 1) continue;
+    if(amplitude[0] < -3.*bLineSig_OK[0]  && amplitude[1] < -3.*bLineSig_OK[1] &&
+       timeMax[0] > 1 && timeMax[1] > 1  && 
+       fabs((time[1]-time[0]) - mean_diff) < 3.*sigma_diff ){
+      if(amplitude[2] < -3.*bLineSig_OK[2] && timeMax[2] > 1){
+	h_signalTrip->Fill((time[1]+time[0])*0.5-time[2]);
+      }
+    }
+  }
+
+
+  inFile.open("analyzed_data/FitParametersTriple.txt", std::ios::in);
+  while(!inFile.eof()){
+    inFile >> inputRun >> rangeMin >> rangeMax >> param0 >> param1 >> param2 >> param3 >> fitMin >> fitMax;
+    if(runFolder == inputRun) break;
+  }
+  inFile.close();
+
   //h_signal => mean - mcp
-  h_signal->GetXaxis()->SetRangeUser(1.,4.);
   h_signal->GetXaxis()->SetTitle("t_{mean} - t_{pl} (ns)");
   h_signal->SetTitle("mean - mcp");
   coincidenze -> cd(2);
-  gGauss->SetParameters(0.05,10.,2.5,3.);	
-  h_signal->Fit("gGauss","","",-20.,20.);
-  if(runFolder == "WFRun005"){
-    gGauss->SetParameters(0.15,10.,2.,0.5);	
-    h_signal->Fit("gGauss","","",-20.,20.);
-  }
-  if(runFolder == "WFRun010"){
-    //    h_signal->GetXaxis()->SetRangeUser(0.,4.);
-    gGauss->SetParameters(0.05,200.,2.2,1.);	
-    h_signal->Fit("gGauss","","",-40.,40.);
-  }
-  if(runFolder == "WFRun012"){
-    h_signal->GetXaxis()->SetRangeUser(0.,4.);
-    gGauss->SetParameters(0.15,20.,2.,0.5);	
-    h_signal->Fit("gGauss","","",-40.,40.);
-  }
+  h_signal->GetXaxis()->SetRangeUser(atof(rangeMin.c_str()), atof(rangeMax.c_str()));
+  gGauss->SetParameters(atof(param0.c_str()), atof(param1.c_str()), atof(param2.c_str()), atof(param3.c_str()) );
+  h_signal->Fit("gGauss","","",atof(fitMin.c_str()), atof(fitMax.c_str()));
+
   std::cout<<"sigma mean - mcp = "<<gGauss->GetParameter(0)<<std::endl;
   float sigma_mcp = fabs(gGauss->GetParameter(0));
   float sigma_mcpE = fabs(gGauss->GetParError(0));
   float mean_mcp = gGauss->GetParameter(2);
+
+  float tripleRate = h_signal->Integral(h_signal->FindBin(mean_mcp-3.*sigma_mcp), h_signal->FindBin(mean_mcp+3.*sigma_mcp));
+  float tripleFakeRate = h_signal->Integral(h_signal->FindBin(mean_mcp-3.*sigma_mcp -5.), h_signal->FindBin(mean_mcp+3.*sigma_mcp -5.));
+
+  //count triple if double
+  //h_signalTrip => mean - mcp                     
+  h_signalTrip->GetXaxis()->SetTitle("t_{mean} - t_{pl} (ns)");
+  h_signalTrip->SetTitle("mean - mcp");
+  //  coincidenze -> cd(3);
+  h_signalTrip->GetXaxis()->SetRangeUser(atof(rangeMin.c_str()), atof(rangeMax.c_str()));
+  gGauss->SetParameters(atof(param0.c_str()), atof(param1.c_str()), atof(param2.c_str()), atof(param3.c_str()) );
+  h_signalTrip->Fit("gGauss","","",atof(fitMin.c_str()), atof(fitMax.c_str()));
+
+  std::cout<<"if double sigma mean - mcp = "<<gGauss->GetParameter(0)<<std::endl;
+  float sigma_mcpT = fabs(gGauss->GetParameter(0));
+  float sigma_mcpET = fabs(gGauss->GetParError(0));
+  float mean_mcpT = gGauss->GetParameter(2);
+
+  float tripleRateT = h_signalTrip->Integral(h_signalTrip->FindBin(mean_mcpT-3.*sigma_mcpT), h_signalTrip->FindBin(mean_mcpT+3.*sigma_mcpT));
+  float tripleFakeRateT = h_signalTrip->Integral(h_signalTrip->FindBin(mean_mcpT-3.*sigma_mcpT -5.), h_signalTrip->FindBin(mean_mcpT+3.*sigma_mcpT -5.));
+
 
   chi->SetPoint(frac,frac,gGauss->GetChisquare()/gGauss->GetNDF());
   sigma->SetPoint(frac,frac,fabs(gGauss->GetParameter(0))); 
@@ -615,10 +796,13 @@ void drawSimple(TString runFolder){
   float sigmaPLANAE = (pow(2.*sigma_mcp*sigma_mcpE,2.)+pow(2.*sigmaMEAN*sigmaMEANE,2.))/2./sqrt(pow(sigma_mcp,2.)-pow(sigmaMEAN,2.));
   std::cout << " sigmaPLANA = " << sigmaPLANA << "+/-" << sigmaPLANAE << std::endl;
 
-  TLatex* latex;
+  float sigmaPLANAT = sqrt( pow(sigma_mcpT,2.) - pow(sigmaMEAN,2.) );
+  float sigmaPLANAET = (pow(2.*sigma_mcpT*sigma_mcpET,2.)+pow(2.*sigmaMEAN*sigmaMEANE,2.))/2./sqrt(pow(sigma_mcpT,2.)-pow(sigmaMEAN,2.));
+  std::cout << " if double sigmaPLANA = " << sigmaPLANAT << "+/-" << sigmaPLANAET << std::endl;
 
+  TLatex* latex;
   TCanvas* Results = new TCanvas();
-  Results->Divide(2,1);
+  Results->Divide(3,1);
   Results->cd(1);
   //  legCutsExample->AddEntry(histos, "t0 - t1"(typeSet.at(0)).c_str(), "pl");
   latex = new TLatex(0.1,0.90, Form("#sigma fit: %1.2e #pm %1.2e",sigma_diff, sigma_diffE));
@@ -648,6 +832,16 @@ void drawSimple(TString runFolder){
   latex -> SetTextColor(1);
   h_signal->SetLineWidth(2);
   h_signal->DrawCopy();
+  Results->cd(3);
+  latex = new TLatex(0.1,0.90, Form("(T)#sigma fit: %1.2e #pm %1.2e",sigma_mcpT, sigma_mcpET));
+  latex -> SetNDC();
+  latex -> SetTextFont(42);
+  latex -> SetTextSize(0.04);
+  latex -> SetTextColor(1);
+  latex->Draw("same");
+  h_signalTrip->SetLineWidth(2);
+  h_signalTrip->DrawCopy();
+
 
   std::cout << "t0-t1: #sigma = " << sigma_diff << "+/-" << sigma_diffE 
 	    << " => t_{std}: #sigma = " << sigmaMCP << "+/-" << sigmaMCPE << std::endl;
@@ -674,35 +868,44 @@ void drawSimple(TString runFolder){
   int doubleFake = 0;
   int tripleFake = 0;
   
-  for (int r=0 ; r<t1->GetEntries()-2 ; ++r)
-    {
-      t1->GetEntry(r);
-      if(fabs((time[1]-time[0]) - mean_diff) < 3*sigma_diff && 
-	 amplitude[0] < -3.*bLineSig_OK[0] && amplitude[1] < -3.*bLineSig_OK[1] &&
-	 amplitude[0] < -0.002 && amplitude[1] < -0.002 && timeMax[0] > 1 && timeMax[1] > 1) //double coincidence
-	{					
+  std::cout << " >> mean_diff = " << mean_diff << " 3*sigma_diff = " << 3*sigma_diff << std::endl;
+  std::cout << " >> doubleC = " << doubleC << std::endl;
+  std::cout << " >> t1->GetEntries()-2 = " << t1->GetEntries()-2 << std::endl;
+  for(int iCount=0; iCount<t1->GetEntries()-2 ; ++iCount){
+    t1->GetEntry(iCount);
+
+    if( (absIntegral[0] > 8. || absIntegral[1] > 8 || absIntegral[2] > 5.) ) continue;
+    if( (runFolder == "WFRun022" || runFolder == "WFRun023") &&
+	(absIntegral[0] > 2. || absIntegral[1] > 2. || absIntegral[2] > 2.) ) continue;
+
+      if(fabs((time[1]-time[0]) - mean_diff) < 3.*sigma_diff && 
+      	 amplitude[0] < -3.*bLineSig_OK[0] && amplitude[1] < -3.*bLineSig_OK[1] &&
+	 timeMax[0] > 1 && timeMax[1] > 1 ) //double coincidence
+	{			
+	  //	  std::cout << " (time[1]-time[0]) = " << (time[1]-time[0]) << std::endl;		
 	  doubleC++;
 	  h_double->Fill(time[1]-time[0]);
-	  if (fabs((time[1]+time[0])*0.5-time[2] - 5.) < 1.5 && 
-	      amplitude[2] < -3.*bLineSig_OK[2] && amplitude[2] < -0.002 && timeMax[2] > 1)   tripleFake++;	 
-	  if (fabs((time[1]+time[0])*0.5-time[2] - mean_mcp) < 3*sigma_mcp && 
-	      amplitude[2] < -3.*bLineSig_OK[2] && amplitude[2] < -0.002 && timeMax[2] > 1)
+	  if(fabs((time[1]+time[0])*0.5-time[2] - mean_mcp - 5.) < 1.5 && 
+	     amplitude[2] < -3.*bLineSig_OK[2] && timeMax[2] > 1)   tripleFake++;	 
+	  if(fabs((time[1]+time[0])*0.5-time[2] - mean_mcp) < 3.*sigma_mcp && 
+	     amplitude[2] < -3.*bLineSig_OK[2] && timeMax[2] > 1)
 	    {
 	      tripleC++;
 	      h_triple->Fill( (time[1]+time[0])*0.5-time[2] - mean_mcp + mean_diff);
 	      //	      std::cout << " fabs(sigma_diff) - fabs(sigma_mcp) = " << fabs(sigma_diff) - fabs(sigma_mcp) << std::endl;
 	    }	      	 
 	}
-      if (fabs(time[1]-time[0] - 13.5) < 1.5 && 
-	  amplitude[0] < -3.*bLineSig_OK[0] && amplitude[1] < -3.*bLineSig_OK[1] && 
-	  amplitude[0] < -0.002 && amplitude[1] < -0.002 && timeMax[0] > 1 && timeMax[1] > 1)
+      if(fabs(time[1]-time[0] - mean_diff - 4.) < 1.5 && 
+	 amplitude[0] < -3.*bLineSig_OK[0] && amplitude[1] < -3.*bLineSig_OK[1] && timeMax[0] > 1 && timeMax[1] > 1)
 	doubleFake++;	
     }
 
   float rateDoubleFake = (float)doubleFake * 3. * sigma_diff/1.5;
-  float rateTripleFake = (float)tripleFake * 3. * sigma_mcp/1.5;
-  
-  std::cout << "saved / triggered / fakeTriple / fakeDouble: " 
+  float rateTripleFake = (float)tripleFake * 3. * sigma_mcp/1.5; 
+
+  std::cout << " " << std::endl;  
+  std::cout << " h_double->GetEntries() =  " << h_double->GetEntries() << std::endl;
+  std::cout << "tripleC / doubleC / fakeTriple / fakeDouble: " 
 	    << tripleC << " / " << doubleC << " / " << rateTripleFake << " / " << rateDoubleFake << std::endl;
   float efficiency = (((float)tripleC - (float)rateTripleFake)/ ((float)doubleC - (float)rateDoubleFake))*100.;
   std::cout << " Planacon efficiency = " << efficiency<< "\%" << std::endl;
@@ -710,8 +913,32 @@ void drawSimple(TString runFolder){
   float TotTrig = (float)doubleC - (float)rateDoubleFake;
   std::cout << " TotTrig = " << TotTrig << std::endl;
 
+  //alternative approach:
+  std::cout << " compute from integral " << std::endl;
+  std::cout << " tripleRate / doubleRate / tripleFakeRate / doubleFakeRate: " 
+	    << tripleRate << " / " << doubleRate << " / " << tripleFakeRate << " / " << doubleFakeRate << std::endl;
+  std::cout << " entries double  = " << histos->GetEntries() << std::endl;
+  std::cout << " " << std::endl;
+
+  float efficiencyIntegral =   (tripleRate - tripleFakeRate)/(doubleRate - doubleFakeRate) * 100.;
+  std::cout << " Planacon (integral) triple = " << tripleRate << " tripleFakeRate = " << tripleFakeRate 
+	    << " doubleRate = " << doubleRate << " doubleFakeRate " << doubleFakeRate << std::endl;
+  std::cout << " Planacon efficiency (integral) = " << efficiencyIntegral << "\%" << std::endl;
+  float TotTrigIntegral = doubleRate - doubleFakeRate;
+  std::cout << " TotTrigIntegral = " << TotTrigIntegral << std::endl;
+
+
+  std::cout << " " << std::endl;
+
+  float efficiencyIntegralT =   (tripleRateT - tripleFakeRateT)/(doubleRate - doubleFakeRate) * 100.;
+  std::cout << " if double Planacon (integral) triple = " << tripleRateT << " tripleFakeRate = " << tripleFakeRateT << std::endl;
+  std::cout << " if double Planacon efficiency (integral) = " << efficiencyIntegralT << "\%" << std::endl;
+
+  std::cout << " " << std::endl;
+
   std::ofstream dataOut(("analyzed_data/"+std::string(runFolder)+".txt").c_str(),std::ios::out);
   dataOut << sigmaMCP << "  " << sigmaMCPE << "  " << sigmaMEAN << "  " << sigmaMEANE << "  " << sigmaPLANA << "  " << sigmaPLANAE 
+    //<< "  " << efficiencyIntegralT << "  " << sqrt(efficiencyIntegralT/100.*(1-efficiencyIntegralT/100.)/TotTrigIntegral)*100. << std::endl;
 	  << "  " << efficiency << "  " << sqrt(efficiency/100.*(1-efficiency/100.)/TotTrig)*100. << std::endl;
   dataOut.close();
 
@@ -720,7 +947,7 @@ void drawSimple(TString runFolder){
   TF1 *retta = new TF1 ("retta","pol1",-0.02,0.);
   retta->SetParameters(0, 1);
   //  p_dtvsamp->Fit("retta","","",-0.02,-0.004);
-  p_dtvsamp->Fit("retta","","", -0.1 , 0.);
+  p_dtvsamp->Fit("retta","","", -0.02 , 0.);
   p_dtvsamp->Draw();
   p_dtvsamp->GetYaxis()->SetTitle("t_{mean} - t_{planacon} (ns)");
   p_dtvsamp->GetXaxis()->SetTitle("Amplitude (mV)");
